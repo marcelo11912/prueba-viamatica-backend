@@ -15,6 +15,9 @@ public interface IUsuarioRepository extends JpaRepository<Usuario, Long> {
 	@Query(value = "SELECT * FROM usuarios WHERE usuarios.mail = :mail", nativeQuery = true)
 	Usuario findByEmail(String mail);
 
+	@Query(value = "SELECT intentos_fallidos FROM usuarios WHERE id_usuario = :idUsuario", nativeQuery = true)
+	Integer findFailedAttemptsByUser(Long idUsuario);
+	
 	@Query(value = "SELECT * FROM usuarios WHERE usuarios.user_name = :user", nativeQuery = true)
 	Usuario findByUser(String user);
 

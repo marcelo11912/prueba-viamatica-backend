@@ -15,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -98,9 +100,10 @@ public class UsuarioController {
         }
         
 		// Verificar la contraseña
-        int attempts = failedAttempts.getOrDefault(emailOrUsuario, 0);
+        int attempts = usuarioRepository.findFailedAttemptsByUser(usuario.getIdUsuario());
         if (!usuario.getPassword().equals(contrasena)) {
-            failedAttempts.put(emailOrUsuario, attempts + 1);
+        	usuario.setIntentosFallidos(attempts+1);
+            usuarioRepository.save(usuario);
             if (attempts + 1 >= 3) {
             	usuario.setStatus("BLOQUEADO");
                 usuarioRepository.save(usuario);
@@ -118,11 +121,14 @@ public class UsuarioController {
         usuarioRepository.save(usuario);  
         
         // Obtener el nombre y rol del usuario
+        long idUsuario = usuario.getIdUsuario();
         String nombre = usuario.getName();
         String apellidos = usuario.getLastName();
         List<String> roles = usuarioRepository.findRolesByUserId(usuario.getIdUsuario());
 
         Map<String, Object> response = new HashMap<>();
+        response.put("idUsuario", idUsuario);
+        response.put("emailOrUsuario", emailOrUsuario);
         response.put("nombre", nombre);
         response.put("apellidos", apellidos);
         response.put("roles", roles);
@@ -134,27 +140,14 @@ public class UsuarioController {
 	
 	@PostMapping("/logout")
 	public ResponseEntity<?> logout(@RequestBody Map<String, String> loginData){
-		String emailOrUsuario = loginData.get("emailOrUsuario");
-		String contrasena = loginData.get("contrasena");
+		String idUsuario = loginData.get("idUsuario");
 		Usuario usuario = new Usuario();
-
-		if (usuarioRepository.findByUser(emailOrUsuario) != null) {
-			usuario = usuarioRepository.findByUser(emailOrUsuario);
-		} else {
-			usuario = usuarioRepository.findByEmail(emailOrUsuario);
-		}
-		
+		usuario = usuarioService.getUserById(Long.parseLong(idUsuario));
 		if (usuario == null) {
 			return ResponseEntity.badRequest().body("Usuario no encontrado.");
 		}
 		
-        if (usuario.getSessionActive() !=null && usuario.getSessionActive().equalsIgnoreCase("0")) {
-            return ResponseEntity.badRequest().body("El usuario tiene la sesion cerrada");
-        }
-        if (!usuario.getPassword().equals(contrasena)) {
-            return ResponseEntity.badRequest().body("Contraseña incorrecta.");
-        }
-        Sesion sesion = sesionRepository.findUltimaSesionPorUsuario(usuario.getIdUsuario());
+		Sesion sesion = sesionRepository.findUltimaSesionPorUsuario(usuario.getIdUsuario());
         if (sesion != null) {
             sesion.setFechaCierre(LocalDateTime.now());
             sesionRepository.save(sesion);
@@ -163,9 +156,42 @@ public class UsuarioController {
         usuario.setSessionActive("0");
         usuarioRepository.save(usuario);
         
-		return ResponseEntity.ok("Cerraste Sesion con exito!");
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Cerraste Sesion con exito!");
+        
+        return ResponseEntity.ok(response);
 	}
 	
+	@PostMapping("/detalles-sesion")
+	public ResponseEntity<?> detallesSesion(@RequestBody Map<String, String> loginData){
+		String idUsuario = loginData.get("idUsuario");
+		String emailOrUsuario = loginData.get("emailOrUsuario");
+
+		Usuario usuario = new Usuario();
+		usuario = usuarioService.getUserById(Long.parseLong(idUsuario));
+		if (usuario == null) {
+			return ResponseEntity.badRequest().body("Usuario no encontrado.");
+		}
+
+		Sesion sesion = sesionRepository.findAntePenultimaSesionPorUsuario(usuario.getIdUsuario());
+        int attempts = usuarioRepository.findFailedAttemptsByUser(usuario.getIdUsuario());
+        Map<String, Object> response = new HashMap<>();
+        response.put("fechaInicio", sesion.getFechaIngreso());
+        response.put("fechaFinalizacion", sesion.getFechaCierre());
+        response.put("numeroIntentos", attempts);
+        
+        return ResponseEntity.ok(response);
+	}
 	
+	@PutMapping("actualizar/{id}")
+	public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Usuario usuario) {
+		Usuario usuarioUpdated = usuarioService.updateUser(id, usuario);
+		return ResponseEntity.ok(usuarioUpdated);
+	}
+	
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getById(@PathVariable Long id) {
+		return ResponseEntity.ok(usuarioService.getUserById(id));
+	}
 	
 }

@@ -10,4 +10,6 @@ public interface ISesionRepository extends JpaRepository<Sesion, Long> {
 	@Query(value = "SELECT * FROM sesiones WHERE id_usuario = :usuarioId ORDER BY fecha_ingreso DESC LIMIT 1", nativeQuery = true)
     Sesion findUltimaSesionPorUsuario(Long usuarioId);
 
+	@Query(value = "SELECT * FROM sesiones WHERE id_usuario = :usuarioId ORDER BY fecha_ingreso DESC LIMIT 1 OFFSET 2", nativeQuery = true)
+	Sesion findAntePenultimaSesionPorUsuario(Long usuarioId);
 }

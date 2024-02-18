@@ -43,14 +43,14 @@ public class Usuario {
 	@NotNull(message = "El apellido es requerido")
 	private String lastName;
 
-	@Column(length = 10)
+	@Column(length = 10,unique = true)
 	@NotBlank(message = "La identificacion no puede estar vacio")
 	@NotNull(message = "La identificacion es requerido")
 	@Pattern(regexp = "\\d{10}", message = "La identificación debe tener 10 dígitos")
     @NoFourConsecutiveDigits(message = "El número no puede tener cuatro dígitos iguales consecutivos.")
 	private String identification;
 
-	@NotNull(message = "La identificacion es requerido")
+	@NotNull(message = "La fecha de nacimiento es requerido")
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
     @JsonFormat(pattern = "yyyy-MM-dd")
 	private Date birthDate;
@@ -75,7 +75,10 @@ public class Usuario {
 
 	@Column(length = 20)
 	private String status;
-
+	
+	@Column(name = "intentos_fallidos", columnDefinition = "int default 0")
+	private int intentosFallidos;
+	
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "roles_usuarios", joinColumns = { @JoinColumn(name = "id_usuario") }, inverseJoinColumns = {
 			@JoinColumn(name = "id_rol") })
@@ -167,6 +170,14 @@ public class Usuario {
 
 	public void setIdUsuario(Long idUsuario) {
 		this.idUsuario = idUsuario;
+	}
+
+	public int getIntentosFallidos() {
+		return intentosFallidos;
+	}
+
+	public void setIntentosFallidos(int intentosFallidos) {
+		this.intentosFallidos = intentosFallidos;
 	}
 	
 
